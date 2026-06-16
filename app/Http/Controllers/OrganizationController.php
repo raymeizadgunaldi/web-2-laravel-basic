@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Organization;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
 
 class OrganizationController extends Controller
 {
@@ -23,15 +25,41 @@ class OrganizationController extends Controller
      */
     public function create()
     {
-        //
+        return view('organization.create', [
+        'title' => 'Create Organization',
+        ]);
     }
+    
 
     /**
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
-    {
-        //
+      {
+           $validated = $request->validate([
+        'name' => 'required|max:255',
+        'leader_name' => 'required|max:255',
+    
+    ], [
+        'name.required' => 'Nama organisasi tidak boleh kosong',
+        'name.max' => 'Nama organisasi tidak boleh lebih dari :max karekter',
+        'leader_name.required' => 'Nama pimpinan tidak boleh kosong',
+        'leader_name.max' => 'Nama pimpinan tidak boleh lebih dari :max karekter',
+    ]);
+
+    try {
+        DB::beginTransaction();
+        $organization = Organization::create($validated);
+        $organization->organizationLeader()->create($validated);
+        DB::commit();
+        return to_route('organization.index')->withSuccess('Data berhasil ditambah');
+    } catch (\Exception $e){
+        DB::rollBack();
+        return to_route('organization.create')->withError('Data gagal ditambah');
+
+    }
+
+
     }
 
     /**
@@ -47,7 +75,10 @@ class OrganizationController extends Controller
      */
     public function edit(Organization $organization)
     {
-        //
+        return view('organization.edit', [
+        'title' => 'Edit Organization',
+        'organization' => $organization,
+        ]);
     }
 
     /**
@@ -55,7 +86,31 @@ class OrganizationController extends Controller
      */
     public function update(Request $request, Organization $organization)
     {
-        //
+                   $validated = $request->validate([
+        'name' => 'required|max:255',
+        'leader_name' => 'required|max:255',
+    
+    ], [
+        'name.required' => 'Nama organisasi tidak boleh kosong',
+        'name.max' => 'Nama organisasi tidak boleh lebih dari :max karekter',
+        'leader_name.required' => 'Nama pimpinan tidak boleh kosong',
+        'leader_name.max' => 'Nama pimpinan tidak boleh lebih dari :max karekter',
+    ]);
+
+    try {
+        DB::beginTransaction();
+        $organization->update($validated);
+        $organization->organizationLeader()->updateOrCreate(
+            ['organization_id' => $organization->id],
+            ['leader_name' => $validated['leader_name']],
+            );
+        DB::commit();
+        return to_route('organization.index')->withSuccess('Data berhasil ditambah');
+    } catch (\Exception $e){
+        DB::rollBack();
+        return to_route('organization.edit', $organization)->withError('Data gagal ditambah');
+
+    }
     }
 
     /**
@@ -63,6 +118,7 @@ class OrganizationController extends Controller
      */
     public function destroy(Organization $organization)
     {
-        //
+        $organization->delete($organization);
+          return to_route('organization.index')->withSuccess('Data berhasil dihapus');
     }
 }
